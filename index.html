@@ -4,47 +4,108 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Bookshop POS</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+    body { background:#f0f2f5; display:flex; justify-content:center; align-items:center; min-height:100vh; }
+    .container { background:white; padding:40px; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:400px; }
+    h1 { text-align:center; margin-bottom:24px; color:#2c3e50; }
+    .tab { display:flex; gap:10px; margin-bottom:20px; }
+    .tab button { flex:1; padding:10px; border:none; background:#e9ecef; border-radius:8px; cursor:pointer; font-weight:bold; }
+    .tab button.active { background:#3498db; color:white; }
+    input, select { width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; }
+    button[type="submit"] { width:100%; padding:12px; background:#2ecc71; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
+    .error { color:#e74c3c; margin:10px 0; }
+    .switch { text-align:center; margin-top:12px; color:#3498db; cursor:pointer; }
+    .role-select { background:#f8f9fa; }
+  </style>
 </head>
 <body>
-  <div class="login-container">
-    <div class="login-box">
-      <h1>📚 Bookshop POS</h1>
-      <form id="loginForm">
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Password" required>
-        <div id="loginError" class="error-message"></div>
-        <button type="submit">Login</button>
-      </form>
-      <p class="hint">admin@test.com / 123456</p>
+  <div class="container">
+    <h1>📚 Bookshop POS</h1>
+    <div class="tab">
+      <button id="loginTab" class="active">Login</button>
+      <button id="registerTab">Register</button>
     </div>
+
+    <!-- Login Form -->
+    <form id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email" required>
+      <input type="password" id="loginPassword" placeholder="Password" required>
+      <select id="loginRole" class="role-select" required>
+        <option value="">-- Select Role --</option>
+        <option value="admin">Admin</option>
+        <option value="owner">Shop Owner</option>
+      </select>
+      <div id="loginError" class="error"></div>
+      <button type="submit">Login</button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" style="display:none;">
+      <input type="text" id="regName" placeholder="Full Name" required>
+      <input type="email" id="regEmail" placeholder="Email" required>
+      <input type="password" id="regPassword" placeholder="Password" required>
+      <select id="regRole" class="role-select" required>
+        <option value="">-- Select Role --</option>
+        <option value="admin">Admin</option>
+        <option value="owner">Shop Owner</option>
+        <option value="customer">Customer</option>
+      </select>
+      <div id="regError" class="error"></div>
+      <button type="submit">Create Account</button>
+    </form>
   </div>
 
   <script type="module">
-    import { auth, signInWithEmailAndPassword, onAuthStateChanged } from './firebase-config.js';
+    import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, setDoc, doc, db } from './firebase-config.js';
 
-    const form = document.getElementById('loginForm');
-    const email = document.getElementById('email');
-    const password = document.getElementById('password');
-    const errorDiv = document.getElementById('loginError');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginError = document.getElementById('loginError');
+    const regError = document.getElementById('regError');
 
-    // Check if already logged in
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = 'dashboard.html';
-      }
-    });
+    // Tab switching
+    loginTab.onclick = () => { loginForm.style.display = 'block'; registerForm.style.display = 'none'; loginTab.className = 'active'; registerTab.className = ''; };
+    registerTab.onclick = () => { loginForm.style.display = 'none'; registerForm.style.display = 'block'; registerTab.className = 'active'; loginTab.className = ''; };
 
-    form.addEventListener('submit', async (e) => {
+    // Login
+    loginForm.onsubmit = async (e) => {
       e.preventDefault();
-      errorDiv.textContent = '';
+      loginError.textContent = '';
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const role = document.getElementById('loginRole').value;
       try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
-        window.location.href = 'dashboard.html';
-      } catch (err) {
-        errorDiv.textContent = '❌ Invalid email or password';
-      }
-    });
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCred.user;
+        // Check role in Firestore
+        const docSnap = await getDoc(doc(db, 'users', user.uid));
+        if (docSnap.exists() && docSnap.data().role === role) {
+          if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';
+          else window.location.href = 'marketplace.html';
+        } else {
+          loginError.textContent = 'Role mismatch or user not found.';
+        }
+      } catch (err) { loginError.textContent = err.message; }
+    };
+
+    // Register
+    registerForm.onsubmit = async (e) => {
+      e.preventDefault();
+      regError.textContent = '';
+      const name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const role = document.getElementById('regRole').value;
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'users', userCred.user.uid), { name, email, role, createdAt: new Date() });
+        if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';
+        else window.location.href = 'marketplace.html';
+      } catch (err) { regError.textContent = err.message; }
+    };
   </script>
 </body>
 </html>

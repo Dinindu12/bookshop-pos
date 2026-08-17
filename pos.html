@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS Dashboard</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+    body { display:flex; background:#f4f6f9; }
+    .sidebar { width:240px; background:#2c3e50; color:white; height:100vh; padding:20px; position:sticky; top:0; }
+    .sidebar h2 { margin-bottom:30px; }
+    .sidebar button { display:block; width:100%; padding:12px; margin:4px 0; background:transparent; border:none; color:white; text-align:left; font-size:16px; cursor:pointer; border-radius:8px; }
+    .sidebar button:hover, .sidebar button.active { background:#34495e; }
+    .main { flex:1; padding:20px; overflow-y:auto; height:100vh; }
+    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+    .stat-card { background:white; padding:16px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+    .section { display:none; background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+    .section.active { display:block; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px; border-bottom:1px solid #eee; text-align:left; }
+    th { background:#f8f9fa; }
+    input, select, textarea { padding:8px; border:1px solid #ddd; border-radius:6px; width:100%; margin:4px 0; }
+    .btn { padding:8px 16px; background:#3498db; color:white; border:none; border-radius:6px; cursor:pointer; }
+    .btn-danger { background:#e74c3c; }
+    .btn-success { background:#2ecc71; }
+    .flex-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .badge { padding:4px 8px; border-radius:12px; font-size:12px; }
+    .badge-pending { background:#f39c12; color:white; }
+    .badge-confirmed { background:#3498db; color:white; }
+    .badge-shipped { background:#9b59b6; color:white; }
+    .badge-cancelled { background:#e74c3c; color:white; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>📚 POS Admin</h2>
+  <button class="active" onclick="showSection('dashboard')">📊 Dashboard</button>
+  <button onclick="showSection('inventory')">📦 Inventory</button>
+  <button onclick="showSection('orders')">📋 Orders</button>
+  <button onclick="showSection('offers')">🏷️ Offers</button>
+  <button onclick="showSection('revenue')">💰 Revenue</button>
+  <button onclick="window.location.href='auth.html'" style="margin-top:30px;background:#e74c3c;border-radius:8px;text-align:center;">Logout</button>
+</div>
+
+<div class="main" id="mainContent">
+  <!-- Dashboard -->
+  <div id="dashboard" class="section active">
+    <h2>📊 Dashboard</h2>
+    <div class="stats" id="statsCards"></div>
+    <h3>Recent Orders</h3>
+    <div id="recentOrders"></div>
+  </div>
+
+  <!-- Inventory -->
+  <div id="inventory" class="section">
+    <h2>📦 Inventory Management</h2>
+    <div class="flex-row">
+      <input id="itemName" placeholder="Name">
+      <input id="itemPrice" placeholder="Price" type="number">
+      <input id="itemStock" placeholder="Stock" type="number">
+      <input id="itemCategory" placeholder="Category">
+      <button class="btn" onclick="addItem()">➕ Add Item</button>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Category</th><th>Actions</th></tr></thead>
+      <tbody id="inventoryTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Orders -->
+  <div id="orders" class="section">
+    <h2>📋 Orders</h2>
+    <table>
+      <thead><tr><th>Bill #</th><th>Customer</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="ordersTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Offers -->
+  <div id="offers" class="section">
+    <h2>🏷️ Offers / Discounts</h2>
+    <div class="flex-row">
+      <input id="offerCode" placeholder="Code (e.g., SALE10)">
+      <input id="offerDiscount" placeholder="Discount %" type="number">
+      <button class="btn" onclick="addOffer()">Create Offer</button>
+    </div>
+    <div id="offerList"></div>
+  </div>
+
+  <!-- Revenue -->
+  <div id="revenue" class="section">
+    <h2>💰 Revenue</h2>
+    <div id="revenueStats"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { db, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs } from './firebase-config.js';
+  import { auth, onAuthStateChanged } from './firebase-config.js';
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) window.location.href = 'auth.html';
+  });
+
+  // -------- Global Functions --------
+  window.showSection = (id) => {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+    // Highlight button (simple hack)
+    document.querySelectorAll('.sidebar button').forEach(b => {
+      if (b.textContent.trim().toLowerCase().includes(id)) b.classList.add('active');
+    });
+  };
+
+  // -------- Inventory CRUD --------
+  onSnapshot(collection(db, 'items'), (snap) => {
+    const tbody = document.getElementById('inventoryTable');
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const tr = `<tr>
+        <td>${d.name}</td>
+        <td>$${d.price?.toFixed(2)}</td>
+        <td>${d.stock}</td>
+        <td>${d.category || '-'}</td>
+        <td>
+          <button class="btn btn-success" onclick="updateItem('${doc.id}')">✏️</button>
+          <button class="btn btn-danger" onclick="deleteItem('${doc.id}')">🗑️</button>
+        </td>
+      </tr>`;
+      tbody.innerHTML += tr;
+    });
+    updateStats();
+  });
+
+  window.addItem = async () => {
+    const name = document.getElementById('itemName').value;
+    const price = parseFloat(document.getElementById('itemPrice').value);
+    const stock = parseInt(document.getElementById('itemStock').value);
+    const category = document.getElementById('itemCategory').value;
+    if (!name || !price) return alert('Name and Price required');
+    await addDoc(collection(db, 'items'), { name, price, stock, category });
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemPrice').value = '';
+    document.getElementById('itemStock').value = '';
+    document.getElementById('itemCategory').value = '';
+  };
+
+  window.deleteItem = async (id) => {
+    if (confirm('Delete this item?')) await deleteDoc(doc(db, 'items', id));
+  };
+
+  window.updateItem = async (id) => {
+    const newStock = prompt('Enter new stock quantity:');
+    if (newStock !== null) {
+      await updateDoc(doc(db, 'items', id), { stock: parseInt(newStock) });
+    }
+  };
+
+  // -------- Orders Management --------
+  onSnapshot(collection(db, 'orders'), (snap) => {
+    const tbody = document.getElementById('ordersTable');
+    tbody.innerHTML = '';
+    let totalRevenue = 0;
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (d.status !== 'cancelled') totalRevenue += d.total || 0;
+      const tr = `<tr>
+        <td>${d.billNumber || 'N/A'}</td>
+        <td>${d.customerName}</td>
+        <td>$${d.total?.toFixed(2)}</td>
+        <td><span class="badge badge-${d.status || 'pending'}">${d.status || 'pending'}</span></td>
+        <td>
+          <select onchange="updateOrderStatus('${doc.id}', this.value)">
+            <option value="pending" ${d.status==='pending'?'selected':''}>Pending</option>
+            <option value="confirmed" ${d.status==='confirmed'?'selected':''}>Confirmed</option>
+            <option value="shipped" ${d.status==='shipped'?'selected':''}>Shipped</option>
+            <option value="cancelled" ${d.status==='cancelled'?'selected':''}>Cancelled</option>
+          </select>
+        </td>
+      </tr>`;
+      tbody.innerHTML += tr;
+    });
+    document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
+  });
+
+  window.updateOrderStatus = async (id, status) => {
+    await updateDoc(doc(db, 'orders', id), { status });
+  };
+
+  // -------- Offers --------
+  window.addOffer = async () => {
+    const code = document.getElementById('offerCode').value;
+    const discount = parseFloat(document.getElementById('offerDiscount').value);
+    if (!code || !discount) return alert('Enter code and discount');
+    await addDoc(collection(db, 'offers'), { code, discount, active: true });
+    document.getElementById('offerCode').value = '';
+    document.getElementById('offerDiscount').value = '';
+    loadOffers();
+  };
+
+  function loadOffers() {
+    onSnapshot(collection(db, 'offers'), (snap) => {
+      const container = document.getElementById('offerList');
+      container.innerHTML = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        container.innerHTML += `<div style="background:#f8f9fa;padding:8px;margin:4px;border-radius:6px;">
+          <strong>${d.code}</strong> - ${d.discount}% off 
+          <button onclick="deleteDoc(doc(db,'offers','${doc.id}'))" style="float:right;background:red;color:white;border:none;border-radius:4px;cursor:pointer;">Remove</button>
+        </div>`;
+      });
+    });
+  }
+  loadOffers();
+
+  // -------- Stats & Revenue --------
+  async function updateStats() {
+    const itemsSnap = await getDocs(collection(db, 'items'));
+    const ordersSnap = await getDocs(collection(db, 'orders'));
+    let total = 0, pending = 0;
+    ordersSnap.forEach(d => {
+      if (d.data().status !== 'cancelled') total += d.data().total || 0;
+      if (d.data().status === 'pending') pending++;
+    });
+    document.getElementById('statsCards').innerHTML = `
+      <div class="stat-card"><h3>📦 Items</h3><p>${itemsSnap.size}</p></div>
+      <div class="stat-card"><h3>📋 Orders</h3><p>${ordersSnap.size}</p></div>
+      <div class="stat-card"><h3>⏳ Pending</h3><p>${pending}</p></div>
+      <div class="stat-card"><h3>💰 Revenue</h3><p>$${total.toFixed(2)}</p></div>
+    `;
+    // Recent Orders
+    const recent = document.getElementById('recentOrders');
+    recent.innerHTML = '';
+    ordersSnap.forEach(d => {
+      const data = d.data();
+      recent.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px;">${data.customerName} - $${data.total} - ${data.status}</div>`;
+    });
+  }
+</script>
+</body>
+</html>
