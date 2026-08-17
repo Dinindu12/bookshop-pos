@@ -15,7 +15,8 @@
     .tab button.active { background:#3498db; color:white; }
     input, select { width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; }
     button[type="submit"] { width:100%; padding:12px; background:#2ecc71; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
-    .error { color:#e74c3c; margin:10px 0; }
+    .error { color:#e74c3c; margin:10px 0; font-size:14px; }
+    .success { color:#27ae60; margin:10px 0; font-size:14px; }
   </style>
 </head>
 <body>
@@ -28,8 +29,8 @@
 
     <!-- Login Form -->
     <form id="loginForm">
-      <input type="email" id="loginEmail" placeholder="Email" required>
-      <input type="password" id="loginPassword" placeholder="Password" required>
+      <input type="email" id="loginEmail" placeholder="Email (e.g., user@example.com)" required>
+      <input type="password" id="loginPassword" placeholder="Password (min 6 chars)" required>
       <select id="loginRole" required>
         <option value="">-- Select Role --</option>
         <option value="admin">Admin</option>
@@ -43,8 +44,8 @@
     <!-- Register Form -->
     <form id="registerForm" style="display:none;">
       <input type="text" id="regName" placeholder="Full Name" required>
-      <input type="email" id="regEmail" placeholder="Email" required>
-      <input type="password" id="regPassword" placeholder="Password" required>
+      <input type="email" id="regEmail" placeholder="Email (e.g., user@example.com)" required>
+      <input type="password" id="regPassword" placeholder="Password (min 6 characters)" required minlength="6">
       <select id="regRole" required>
         <option value="">-- Select Role --</option>
         <option value="admin">Admin</option>
@@ -52,6 +53,7 @@
         <option value="customer">Customer</option>
       </select>
       <div id="regError" class="error"></div>
+      <div id="regSuccess" class="success"></div>
       <button type="submit">Create Account</button>
     </form>
   </div>
@@ -65,18 +67,38 @@
     const registerTab = document.getElementById('registerTab');
     const loginError = document.getElementById('loginError');
     const regError = document.getElementById('regError');
+    const regSuccess = document.getElementById('regSuccess');
 
     // Tab switching
-    loginTab.onclick = () => { loginForm.style.display = 'block'; registerForm.style.display = 'none'; loginTab.className = 'active'; registerTab.className = ''; };
-    registerTab.onclick = () => { loginForm.style.display = 'none'; registerForm.style.display = 'block'; registerTab.className = 'active'; loginTab.className = ''; };
+    loginTab.onclick = () => { 
+      loginForm.style.display = 'block'; 
+      registerForm.style.display = 'none'; 
+      loginTab.className = 'active'; 
+      registerTab.className = ''; 
+      regError.textContent = '';
+      regSuccess.textContent = '';
+    };
+    registerTab.onclick = () => { 
+      loginForm.style.display = 'none'; 
+      registerForm.style.display = 'block'; 
+      registerTab.className = 'active'; 
+      loginTab.className = '';
+      loginError.textContent = '';
+    };
 
     // Login
     loginForm.onsubmit = async (e) => {
       e.preventDefault();
       loginError.textContent = '';
-      const email = document.getElementById('loginEmail').value;
+      const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value;
       const role = document.getElementById('loginRole').value;
+
+      if (!email || !password || !role) {
+        loginError.textContent = 'All fields are required!';
+        return;
+      }
+
       try {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
@@ -87,23 +109,75 @@
         } else {
           loginError.textContent = 'Role mismatch or user not found.';
         }
-      } catch (err) { loginError.textContent = err.message; }
+      } catch (err) {
+        console.error('Login Error:', err);
+        if (err.code === 'auth/user-not-found') {
+          loginError.textContent = 'User not found. Please register first.';
+        } else if (err.code === 'auth/wrong-password') {
+          loginError.textContent = 'Wrong password. Please try again.';
+        } else if (err.code === 'auth/invalid-email') {
+          loginError.textContent = 'Invalid email format. Use email@example.com';
+        } else {
+          loginError.textContent = err.message || 'Login failed. Please try again.';
+        }
+      }
     };
 
     // Register
     registerForm.onsubmit = async (e) => {
       e.preventDefault();
       regError.textContent = '';
-      const name = document.getElementById('regName').value;
-      const email = document.getElementById('regEmail').value;
+      regSuccess.textContent = '';
+      
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
       const role = document.getElementById('regRole').value;
+
+      // Validation
+      if (!name || !email || !password || !role) {
+        regError.textContent = 'All fields are required!';
+        return;
+      }
+
+      if (password.length < 6) {
+        regError.textContent = 'Password must be at least 6 characters!';
+        return;
+      }
+
+      if (!email.includes('@') || !email.includes('.')) {
+        regError.textContent = 'Please enter a valid email address (e.g., user@example.com)';
+        return;
+      }
+
       try {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, 'users', userCred.user.uid), { name, email, role, createdAt: new Date() });
-        if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';
-        else window.location.href = 'marketplace.html';
-      } catch (err) { regError.textContent = err.message; }
+        await setDoc(doc(db, 'users', userCred.user.uid), { 
+          name, 
+          email, 
+          role, 
+          createdAt: new Date().toISOString() 
+        });
+        
+        regSuccess.textContent = '✅ Account created successfully! Redirecting...';
+        
+        setTimeout(() => {
+          if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';
+          else window.location.href = 'marketplace.html';
+        }, 1500);
+        
+      } catch (err) {
+        console.error('Registration Error:', err);
+        if (err.code === 'auth/email-already-in-use') {
+          regError.textContent = 'This email is already registered. Please login instead.';
+        } else if (err.code === 'auth/invalid-email') {
+          regError.textContent = 'Invalid email format. Use email@example.com';
+        } else if (err.code === 'auth/weak-password') {
+          regError.textContent = 'Password is too weak. Use at least 6 characters.';
+        } else {
+          regError.textContent = err.message || 'Registration failed. Please try again.';
+        }
+      }
     };
   </script>
 </body>
