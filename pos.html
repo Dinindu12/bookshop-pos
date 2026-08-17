@@ -20,6 +20,8 @@
       top:0;
       z-index:1000;
       box-shadow:0 2px 8px rgba(0,0,0,0.2);
+      flex-wrap:wrap;
+      gap:8px;
     }
     .top-header .brand {
       display:flex;
@@ -49,6 +51,7 @@
       display:flex;
       align-items:center;
       gap:10px;
+      flex-wrap:wrap;
     }
     .header-actions .user-email {
       font-size:12px;
@@ -67,6 +70,23 @@
       transition:0.3s;
     }
     .header-actions .logout-btn:hover { background:#c0392b; }
+    
+    /* Marketplace Button */
+    .header-actions .marketplace-btn {
+      background:#2ecc71;
+      color:white;
+      border:none;
+      padding:6px 14px;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:13px;
+      font-weight:500;
+      transition:0.3s;
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+    .header-actions .marketplace-btn:hover { background:#27ae60; }
 
     /* ===== SIDEBAR (Slide from left) ===== */
     .sidebar-overlay {
@@ -317,6 +337,7 @@
       .form-row input { min-width:60px; font-size:12px; padding:6px 10px; }
       .btn { font-size:12px; padding:6px 12px; }
       .top-header .brand h1 { font-size:16px; }
+      .header-actions .marketplace-btn { font-size:12px; padding:4px 10px; }
     }
 
     @media (max-width:480px) {
@@ -328,6 +349,7 @@
       .top-header { padding:8px 12px; }
       .top-header .brand h1 { font-size:14px; }
       .hamburger { font-size:24px; }
+      .header-actions .marketplace-btn { font-size:11px; padding:4px 8px; }
     }
 
     /* Scrollbar Styling */
@@ -368,8 +390,8 @@
 
     <div class="nav-divider"></div>
 
-    <button class="nav-item" onclick="window.location.href='marketplace.html'">
-      <span class="icon">🛒</span> Marketplace
+    <button class="nav-item" onclick="window.open('https://Dinindu12.github.io/bookshop-customer/', '_blank')">
+      <span class="icon">🛒</span> Customer Store
     </button>
     <button class="nav-item" onclick="window.location.href='index.html'" style="color:#e74c3c;">
       <span class="icon">🚪</span> Logout
@@ -388,6 +410,10 @@
       </div>
       <div class="header-actions">
         <span class="user-email" id="userEmailDisplay">admin@test.com</span>
+        <!-- ✅ NEW: Marketplace Button -->
+        <button class="marketplace-btn" onclick="window.open('https://Dinindu12.github.io/bookshop-customer/', '_blank')">
+          🛒 Marketplace
+        </button>
         <button class="logout-btn" onclick="window.location.href='index.html'">Logout</button>
       </div>
     </div>
