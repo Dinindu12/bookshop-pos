@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Bookshop POS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
     body { background:#f0f2f5; display:flex; justify-content:center; align-items:center; min-height:100vh; }
     .container { background:white; padding:40px; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:400px; }
     h1 { text-align:center; margin-bottom:24px; color:#2c3e50; }
@@ -15,8 +16,6 @@
     input, select { width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; }
     button[type="submit"] { width:100%; padding:12px; background:#2ecc71; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
     .error { color:#e74c3c; margin:10px 0; }
-    .switch { text-align:center; margin-top:12px; color:#3498db; cursor:pointer; }
-    .role-select { background:#f8f9fa; }
   </style>
 </head>
 <body>
@@ -31,10 +30,11 @@
     <form id="loginForm">
       <input type="email" id="loginEmail" placeholder="Email" required>
       <input type="password" id="loginPassword" placeholder="Password" required>
-      <select id="loginRole" class="role-select" required>
+      <select id="loginRole" required>
         <option value="">-- Select Role --</option>
         <option value="admin">Admin</option>
         <option value="owner">Shop Owner</option>
+        <option value="customer">Customer</option>
       </select>
       <div id="loginError" class="error"></div>
       <button type="submit">Login</button>
@@ -45,7 +45,7 @@
       <input type="text" id="regName" placeholder="Full Name" required>
       <input type="email" id="regEmail" placeholder="Email" required>
       <input type="password" id="regPassword" placeholder="Password" required>
-      <select id="regRole" class="role-select" required>
+      <select id="regRole" required>
         <option value="">-- Select Role --</option>
         <option value="admin">Admin</option>
         <option value="owner">Shop Owner</option>
@@ -57,7 +57,7 @@
   </div>
 
   <script type="module">
-    import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, setDoc, doc, db } from './firebase-config.js';
+    import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, setDoc, doc, getDoc, db } from './firebase-config.js';
 
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
@@ -80,7 +80,6 @@
       try {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
-        // Check role in Firestore
         const docSnap = await getDoc(doc(db, 'users', user.uid));
         if (docSnap.exists() && docSnap.data().role === role) {
           if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';

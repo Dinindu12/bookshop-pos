@@ -28,6 +28,7 @@
     .bill-line { display:flex; justify-content:space-between; padding:4px 0; }
     .bill-total { font-size:20px; font-weight:bold; border-top:2px solid #000; padding-top:8px; }
     .whatsapp-btn { background:#25D366; color:white; border:none; padding:10px; border-radius:8px; width:100%; margin-top:12px; cursor:pointer; }
+    .back-btn { background:#34495e; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; margin-right:10px; }
   </style>
 </head>
 <body>
@@ -36,7 +37,8 @@
     <input type="text" id="searchInput" placeholder="🔍 Search books...">
     <div class="nav-links">
       <span id="userDisplay">👤 Customer</span>
-      <button onclick="window.location.href='auth.html'">Logout</button>
+      <button id="backToPos" style="display:none; background:#34495e;" onclick="window.location.href='pos.html'">⬅ Back to POS</button>
+      <button onclick="window.location.href='index.html'">Logout</button>
     </div>
   </div>
 
@@ -63,17 +65,27 @@
   </div>
 
   <script type="module">
-    import { db, collection, onSnapshot, addDoc, updateDoc, doc, query, where, getDocs } from './firebase-config.js';
+    import { db, collection, onSnapshot, addDoc, updateDoc, doc, getDoc } from './firebase-config.js';
     import { auth, onAuthStateChanged } from './firebase-config.js';
 
     let products = [];
     let cart = [];
     let currentUser = null;
-    let lastOrderId = null;
+    let currentUserRole = '';
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) { window.location.href = 'auth.html'; }
-      else { currentUser = user; document.getElementById('userDisplay').textContent = '👤 ' + user.email; }
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = 'index.html'; }
+      else {
+        currentUser = user;
+        document.getElementById('userDisplay').textContent = '👤 ' + user.email;
+        const docSnap = await getDoc(doc(db, 'users', user.uid));
+        if (docSnap.exists()) {
+          currentUserRole = docSnap.data().role;
+          if (currentUserRole === 'admin' || currentUserRole === 'owner') {
+            document.getElementById('backToPos').style.display = 'inline-block';
+          }
+        }
+      }
     });
 
     // Load Products
@@ -155,13 +167,12 @@
         address,
         phone,
         userId: currentUser.uid,
-        status: 'pending', // pending, confirmed, shipped, cancelled
+        status: 'pending',
         createdAt: new Date().toISOString(),
         billNumber: 'INV-' + Date.now()
       };
 
       const docRef = await addDoc(collection(db, 'orders'), orderData);
-      lastOrderId = docRef.id;
 
       // Reduce stock
       for (let item of cart) {
@@ -169,7 +180,6 @@
         await updateDoc(ref, { stock: item.stock - item.qty });
       }
 
-      // Show Bill
       showBill(orderData, docRef.id);
       cart = [];
       renderCart();
@@ -192,7 +202,6 @@
       content.innerHTML = html;
       modal.style.display = 'flex';
 
-      // WhatsApp Button
       document.getElementById('whatsappBtn').onclick = () => {
         const msg = `New Order Received!%0AOrder ID: ${orderId}%0ACustomer: ${order.customerName}%0APhone: ${order.phone}%0ATotal: $${order.total}%0APlease check the POS dashboard.`;
         window.open(`https://wa.me/94XXXXXXXXX?text=${msg}`, '_blank');
