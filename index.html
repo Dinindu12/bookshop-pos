@@ -2,24 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>Login - Bookshop POS</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
-    body { background:#f0f2f5; display:flex; justify-content:center; align-items:center; min-height:100vh; }
-    .container { background:white; padding:40px; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:400px; }
-    h1 { text-align:center; margin-bottom:24px; color:#2c3e50; }
-    .tab { display:flex; gap:10px; margin-bottom:20px; }
-    .tab button { flex:1; padding:10px; border:none; background:#e9ecef; border-radius:8px; cursor:pointer; font-weight:bold; }
+    body { background:#f0f2f5; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:16px; }
+    .container { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:100%; max-width:400px; padding:24px; }
+    h1 { text-align:center; margin-bottom:20px; color:#2c3e50; font-size:24px; }
+    .tab { display:flex; gap:8px; margin-bottom:16px; }
+    .tab button { flex:1; padding:10px; border:none; background:#e9ecef; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.3s; }
     .tab button.active { background:#3498db; color:white; }
-    input, select { width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; }
-    button[type="submit"] { width:100%; padding:12px; background:#2ecc71; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
-    .error { color:#e74c3c; margin:10px 0; font-size:14px; }
-    .success { color:#27ae60; margin:10px 0; font-size:14px; }
+    input, select { width:100%; padding:12px; margin:6px 0; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+    button[type="submit"] { width:100%; padding:12px; background:#2ecc71; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; font-weight:600; transition:0.3s; }
+    button[type="submit"]:hover { background:#27ae60; }
+    .error { color:#e74c3c; margin:8px 0; font-size:13px; text-align:center; }
+    .success { color:#27ae60; margin:8px 0; font-size:14px; text-align:center; font-weight:600; background:#d5f5e3; padding:10px; border-radius:8px; display:none; }
+    .toast { position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#27ae60; color:white; padding:14px 28px; border-radius:12px; font-weight:600; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:9999; display:none; animation:slideDown 0.5s ease; max-width:90%; text-align:center; }
+    .toast.error { background:#e74c3c; }
+    @keyframes slideDown { from { top:-50px; opacity:0; } to { top:20px; opacity:1; } }
+    .hint { text-align:center; margin-top:12px; color:#7f8c8d; font-size:12px; }
+    @media (max-width:480px) { .container { padding:16px; } h1 { font-size:20px; } input, select { padding:10px; font-size:13px; } }
   </style>
 </head>
 <body>
+
+  <div id="toast" class="toast"></div>
+
   <div class="container">
     <h1>📚 Bookshop POS</h1>
     <div class="tab">
@@ -29,7 +38,7 @@
 
     <!-- Login Form -->
     <form id="loginForm">
-      <input type="email" id="loginEmail" placeholder="Email (e.g., user@example.com)" required>
+      <input type="email" id="loginEmail" placeholder="Email" required>
       <input type="password" id="loginPassword" placeholder="Password (min 6 chars)" required>
       <select id="loginRole" required>
         <option value="">-- Select Role --</option>
@@ -44,8 +53,8 @@
     <!-- Register Form -->
     <form id="registerForm" style="display:none;">
       <input type="text" id="regName" placeholder="Full Name" required>
-      <input type="email" id="regEmail" placeholder="Email (e.g., user@example.com)" required>
-      <input type="password" id="regPassword" placeholder="Password (min 6 characters)" required minlength="6">
+      <input type="email" id="regEmail" placeholder="Email" required>
+      <input type="password" id="regPassword" placeholder="Password (min 6 chars)" required minlength="6">
       <select id="regRole" required>
         <option value="">-- Select Role --</option>
         <option value="admin">Admin</option>
@@ -56,6 +65,7 @@
       <div id="regSuccess" class="success"></div>
       <button type="submit">Create Account</button>
     </form>
+    <p class="hint">Demo: admin@test.com / 123456</p>
   </div>
 
   <script type="module">
@@ -68,25 +78,36 @@
     const loginError = document.getElementById('loginError');
     const regError = document.getElementById('regError');
     const regSuccess = document.getElementById('regSuccess');
+    const toast = document.getElementById('toast');
 
-    // Tab switching
+    function showToast(message, isError = false) {
+      toast.textContent = message;
+      toast.className = 'toast' + (isError ? ' error' : '');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
     loginTab.onclick = () => { 
       loginForm.style.display = 'block'; 
       registerForm.style.display = 'none'; 
       loginTab.className = 'active'; 
       registerTab.className = ''; 
       regError.textContent = '';
-      regSuccess.textContent = '';
+      regSuccess.style.display = 'none';
+      loginError.textContent = '';
     };
+    
     registerTab.onclick = () => { 
       loginForm.style.display = 'none'; 
       registerForm.style.display = 'block'; 
       registerTab.className = 'active'; 
       loginTab.className = '';
       loginError.textContent = '';
+      regError.textContent = '';
+      regSuccess.style.display = 'none';
     };
 
-    // Login
+    // LOGIN
     loginForm.onsubmit = async (e) => {
       e.preventDefault();
       loginError.textContent = '';
@@ -101,52 +122,42 @@
 
       try {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCred.user;
-        const docSnap = await getDoc(doc(db, 'users', user.uid));
+        const docSnap = await getDoc(doc(db, 'users', userCred.user.uid));
+        
         if (docSnap.exists() && docSnap.data().role === role) {
-          if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';
-          else window.location.href = 'marketplace.html';
+          showToast('✅ Login successful! Welcome ' + (docSnap.data().name || 'User') + '!');
+          setTimeout(() => {
+            if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';
+            else window.location.href = 'marketplace.html';
+          }, 1200);
         } else {
-          loginError.textContent = 'Role mismatch or user not found.';
+          loginError.textContent = '❌ Role mismatch. Please check your role.';
         }
       } catch (err) {
-        console.error('Login Error:', err);
-        if (err.code === 'auth/user-not-found') {
-          loginError.textContent = 'User not found. Please register first.';
-        } else if (err.code === 'auth/wrong-password') {
-          loginError.textContent = 'Wrong password. Please try again.';
-        } else if (err.code === 'auth/invalid-email') {
-          loginError.textContent = 'Invalid email format. Use email@example.com';
-        } else {
-          loginError.textContent = err.message || 'Login failed. Please try again.';
-        }
+        if (err.code === 'auth/user-not-found') loginError.textContent = '❌ User not found. Please register.';
+        else if (err.code === 'auth/wrong-password') loginError.textContent = '❌ Wrong password.';
+        else if (err.code === 'auth/invalid-email') loginError.textContent = '❌ Invalid email.';
+        else loginError.textContent = '❌ ' + err.message;
       }
     };
 
-    // Register
+    // REGISTER
     registerForm.onsubmit = async (e) => {
       e.preventDefault();
       regError.textContent = '';
-      regSuccess.textContent = '';
+      regSuccess.style.display = 'none';
       
       const name = document.getElementById('regName').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
       const role = document.getElementById('regRole').value;
 
-      // Validation
       if (!name || !email || !password || !role) {
         regError.textContent = 'All fields are required!';
         return;
       }
-
       if (password.length < 6) {
         regError.textContent = 'Password must be at least 6 characters!';
-        return;
-      }
-
-      if (!email.includes('@') || !email.includes('.')) {
-        regError.textContent = 'Please enter a valid email address (e.g., user@example.com)';
         return;
       }
 
@@ -159,7 +170,9 @@
           createdAt: new Date().toISOString() 
         });
         
-        regSuccess.textContent = '✅ Account created successfully! Redirecting...';
+        regSuccess.style.display = 'block';
+        regSuccess.textContent = '✅ Account created successfully! Welcome ' + name + '!';
+        showToast('✅ Registration successful! Welcome ' + name + '!');
         
         setTimeout(() => {
           if (role === 'admin' || role === 'owner') window.location.href = 'pos.html';
@@ -167,16 +180,10 @@
         }, 1500);
         
       } catch (err) {
-        console.error('Registration Error:', err);
-        if (err.code === 'auth/email-already-in-use') {
-          regError.textContent = 'This email is already registered. Please login instead.';
-        } else if (err.code === 'auth/invalid-email') {
-          regError.textContent = 'Invalid email format. Use email@example.com';
-        } else if (err.code === 'auth/weak-password') {
-          regError.textContent = 'Password is too weak. Use at least 6 characters.';
-        } else {
-          regError.textContent = err.message || 'Registration failed. Please try again.';
-        }
+        if (err.code === 'auth/email-already-in-use') regError.textContent = '❌ Email already registered. Please login.';
+        else if (err.code === 'auth/invalid-email') regError.textContent = '❌ Invalid email format.';
+        else if (err.code === 'auth/weak-password') regError.textContent = '❌ Password too weak. Use 6+ chars.';
+        else regError.textContent = '❌ ' + err.message;
       }
     };
   </script>
