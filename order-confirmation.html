@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation - Bookshop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+    body { background:#f0f2f5; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
+    .container { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); max-width:700px; width:100%; padding:40px; }
+    .header { text-align:center; margin-bottom:30px; }
+    .header h1 { color:#2c3e50; font-size:28px; }
+    .header .order-id { color:#7f8c8d; font-size:14px; margin-top:4px; }
+    .success-badge { background:#2ecc71; color:white; padding:8px 24px; border-radius:30px; display:inline-block; font-weight:600; }
+    .divider { border:1px solid #eee; margin:20px 0; }
+    .bill-section { background:#f8f9fa; border-radius:12px; padding:20px; margin:16px 0; }
+    .bill-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; }
+    .bill-row:last-child { border-bottom:none; }
+    .bill-total { font-size:22px; font-weight:700; color:#2c3e50; padding-top:12px; border-top:2px solid #2c3e50; margin-top:8px; }
+    .customer-info { background:#e8f4fd; border-radius:12px; padding:16px; margin:16px 0; }
+    .customer-info p { margin:4px 0; }
+    .whatsapp-btn { width:100%; padding:14px; background:#25D366; color:white; border:none; border-radius:10px; font-size:18px; font-weight:600; cursor:pointer; transition:0.3s; margin-top:16px; }
+    .whatsapp-btn:hover { background:#1da851; transform:scale(1.02); }
+    .back-btn { width:100%; padding:12px; background:#3498db; color:white; border:none; border-radius:10px; font-size:16px; cursor:pointer; margin-top:8px; }
+    .back-btn:hover { background:#2980b9; }
+    .item-list { max-height:200px; overflow-y:auto; }
+    .status { color:#27ae60; font-weight:600; }
+    .print-btn { background:#34495e; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer; margin-top:8px; width:100%; }
+    @media print {
+      .no-print { display:none !important; }
+      body { background:white; }
+      .container { box-shadow:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="confirmationContainer">
+    <div class="header">
+      <div class="success-badge">✅ Order Placed Successfully</div>
+      <h1>🧾 Order Confirmation</h1>
+      <div class="order-id">Order #: <span id="orderId">---</span></div>
+      <div class="order-id">Date: <span id="orderDate">---</span></div>
+    </div>
+
+    <div class="customer-info" id="customerInfo">
+      <p><strong>👤 Customer:</strong> <span id="custName">---</span></p>
+      <p><strong>📞 Phone:</strong> <span id="custPhone">---</span></p>
+      <p><strong>📍 Address:</strong> <span id="custAddress">---</span></p>
+    </div>
+
+    <div class="bill-section">
+      <h3 style="margin-bottom:12px;">📋 Order Items</h3>
+      <div class="item-list" id="itemsList"></div>
+      <div class="bill-row" style="font-weight:600; margin-top:8px;">
+        <span>Subtotal</span>
+        <span>$<span id="subtotal">0.00</span></span>
+      </div>
+      <div class="bill-row bill-total">
+        <span>TOTAL</span>
+        <span>$<span id="totalAmount">0.00</span></span>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="whatsapp-btn no-print" id="whatsappBtn">📱 Send to Owner via WhatsApp</button>
+      <button class="print-btn no-print" onclick="window.print()">🖨️ Print Bill</button>
+    </div>
+    <button class="back-btn no-print" onclick="window.location.href='marketplace.html'">🛒 Continue Shopping</button>
+  </div>
+
+  <script type="module">
+    import { db, doc, getDoc } from './firebase-config.js';
+
+    // Get order data from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+
+    if (!orderId) {
+      document.getElementById('confirmationContainer').innerHTML = `
+        <div style="text-align:center;padding:40px;">
+          <h2>❌ No order found</h2>
+          <button onclick="window.location.href='marketplace.html'" style="padding:12px 24px;background:#3498db;color:white;border:none;border-radius:8px;cursor:pointer;">Go to Marketplace</button>
+        </div>
+      `;
+    } else {
+      loadOrder(orderId);
+    }
+
+    async function loadOrder(orderId) {
+      try {
+        const docSnap = await getDoc(doc(db, 'orders', orderId));
+        if (!docSnap.exists()) {
+          document.getElementById('confirmationContainer').innerHTML = `
+            <div style="text-align:center;padding:40px;">
+              <h2>❌ Order not found</h2>
+              <button onclick="window.location.href='marketplace.html'" style="padding:12px 24px;background:#3498db;color:white;border:none;border-radius:8px;cursor:pointer;">Go to Marketplace</button>
+            </div>
+          `;
+          return;
+        }
+
+        const order = docSnap.data();
+        
+        // Set order details
+        document.getElementById('orderId').textContent = order.billNumber || orderId;
+        document.getElementById('orderDate').textContent = new Date(order.createdAt).toLocaleString();
+        document.getElementById('custName').textContent = order.customerName || 'Walk-in Customer';
+        document.getElementById('custPhone').textContent = order.phone || 'N/A';
+        document.getElementById('custAddress').textContent = order.address || 'N/A';
+        document.getElementById('subtotal').textContent = order.total?.toFixed(2) || '0.00';
+        document.getElementById('totalAmount').textContent = order.total?.toFixed(2) || '0.00';
+
+        // Render items
+        const itemsList = document.getElementById('itemsList');
+        itemsList.innerHTML = '';
+        let subtotal = 0;
+        
+        if (order.items && order.items.length > 0) {
+          order.items.forEach(item => {
+            const itemTotal = item.price * item.qty;
+            subtotal += itemTotal;
+            const div = document.createElement('div');
+            div.className = 'bill-row';
+            div.innerHTML = `
+              <span>${item.name || item.title || 'Item'} x ${item.qty}</span>
+              <span>$${itemTotal.toFixed(2)}</span>
+            `;
+            itemsList.appendChild(div);
+          });
+        }
+
+        // WhatsApp button
+        document.getElementById('whatsappBtn').onclick = () => {
+          sendWhatsApp(order, orderId);
+        };
+
+      } catch (err) {
+        console.error('Error loading order:', err);
+        document.getElementById('confirmationContainer').innerHTML = `
+          <div style="text-align:center;padding:40px;">
+            <h2>❌ Error loading order</h2>
+            <p>${err.message}</p>
+            <button onclick="window.location.href='marketplace.html'" style="padding:12px 24px;background:#3498db;color:white;border:none;border-radius:8px;cursor:pointer;">Go to Marketplace</button>
+          </div>
+        `;
+      }
+    }
+
+    function sendWhatsApp(order, orderId) {
+      let message = `🛒 *New Order Received!*%0A%0A`;
+      message += `📋 *Order ID:* ${order.billNumber || orderId}%0A`;
+      message += `📅 *Date:* ${new Date(order.createdAt).toLocaleString()}%0A%0A`;
+      message += `👤 *Customer:* ${order.customerName || 'Walk-in'}%0A`;
+      message += `📞 *Phone:* ${order.phone || 'N/A'}%0A`;
+      message += `📍 *Address:* ${order.address || 'N/A'}%0A%0A`;
+      message += `📦 *Items:*%0A`;
+      
+      if (order.items && order.items.length > 0) {
+        order.items.forEach(item => {
+          message += `  - ${item.name || item.title || 'Item'} x ${item.qty} = $${(item.price * item.qty).toFixed(2)}%0A`;
+        });
+      }
+      
+      message += `%0A💰 *Total: $${order.total?.toFixed(2) || '0.00'}*%0A%0A`;
+      message += `✅ Please check the POS dashboard to confirm and update status.`;
+
+      // URL encode the message
+      const encodedMsg = encodeURIComponent(message);
+      
+      // Open WhatsApp with the message (replace with owner's phone number)
+      const phoneNumber = '94726373156'; // Change this to owner's phone number
+      window.open(`https://wa.me/${phoneNumber}?text=${encodedMsg}`, '_blank');
+    }
+  </script>
+</body>
+</html>

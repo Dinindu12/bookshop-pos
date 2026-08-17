@@ -7,28 +7,26 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
     body { background:#f8f9fa; }
-    .navbar { background:#2c3e50; color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
-    .navbar input { padding:8px 16px; border-radius:20px; border:none; width:300px; }
-    .nav-links { display:flex; gap:16px; align-items:center; }
-    .nav-links button { background:#e74c3c; border:none; padding:6px 12px; border-radius:6px; color:white; cursor:pointer; }
-    .container { display:flex; gap:20px; padding:20px; max-width:1400px; margin:auto; }
-    .products { flex:3; display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:16px; }
+    .navbar { background:#2c3e50; color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; flex-wrap:wrap; gap:8px; }
+    .navbar input { padding:8px 16px; border-radius:20px; border:none; width:300px; max-width:100%; }
+    .nav-links { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .nav-links button { border:none; padding:6px 12px; border-radius:6px; color:white; cursor:pointer; }
+    .container { display:flex; gap:20px; padding:20px; max-width:1400px; margin:auto; flex-wrap:wrap; }
+    .products { flex:3; display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px; min-width:250px; }
     .card { background:white; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); text-align:center; cursor:pointer; transition:0.2s; }
     .card:hover { transform:translateY(-4px); box-shadow:0 4px 16px rgba(0,0,0,0.12); }
-    .card .icon { font-size:48px; }
-    .card h3 { margin:8px 0; }
+    .card .icon { font-size:40px; }
+    .card h3 { margin:8px 0; font-size:16px; }
     .card .price { color:#27ae60; font-weight:bold; }
     .card .stock { font-size:12px; color:#95a5a6; }
-    .cart-side { flex:1; background:white; border-radius:12px; padding:16px; height:fit-content; position:sticky; top:80px; box-shadow:0 2px 8px rgba(0,0,0,0.06); max-height:80vh; overflow-y:auto; }
-    .cart-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; }
+    .cart-side { flex:1; background:white; border-radius:12px; padding:16px; height:fit-content; position:sticky; top:80px; box-shadow:0 2px 8px rgba(0,0,0,0.06); max-height:80vh; overflow-y:auto; min-width:250px; }
+    .cart-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; align-items:center; }
     .checkout-btn { width:100%; padding:12px; background:#2ecc71; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:12px; }
-    .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; justify-content:center; align-items:center; z-index:999; }
-    .modal-content { background:white; padding:30px; border-radius:12px; max-width:500px; width:100%; max-height:80vh; overflow-y:auto; }
-    .modal-content h2 { margin-bottom:16px; }
-    .bill-line { display:flex; justify-content:space-between; padding:4px 0; }
-    .bill-total { font-size:20px; font-weight:bold; border-top:2px solid #000; padding-top:8px; }
-    .whatsapp-btn { background:#25D366; color:white; border:none; padding:10px; border-radius:8px; width:100%; margin-top:12px; cursor:pointer; }
+    .checkout-btn:hover { background:#27ae60; }
     .back-btn { background:#34495e; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; margin-right:10px; }
+    .logout-btn { background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; }
+    .badge { background:#e74c3c; color:white; padding:2px 8px; border-radius:12px; font-size:12px; margin-left:4px; }
+    @media (max-width:768px) { .container { flex-direction:column; } .cart-side { position:relative; top:0; } }
   </style>
 </head>
 <body>
@@ -38,7 +36,7 @@
     <div class="nav-links">
       <span id="userDisplay">👤 Customer</span>
       <button id="backToPos" style="display:none; background:#34495e;" onclick="window.location.href='pos.html'">⬅ Back to POS</button>
-      <button onclick="window.location.href='index.html'">Logout</button>
+      <button class="logout-btn" onclick="window.location.href='index.html'">Logout</button>
     </div>
   </div>
 
@@ -51,16 +49,6 @@
         <p><strong>Total:</strong> $<span id="cartTotal">0.00</span></p>
         <button class="checkout-btn" id="checkoutBtn">Place Order</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Bill Modal -->
-  <div class="modal" id="billModal">
-    <div class="modal-content">
-      <h2>🧾 Invoice / Bill</h2>
-      <div id="billContent"></div>
-      <button class="whatsapp-btn" id="whatsappBtn">📱 Send to Owner via WhatsApp</button>
-      <button onclick="document.getElementById('billModal').style.display='none'" style="margin-top:8px;width:100%;padding:8px;background:#eee;border:none;border-radius:6px;cursor:pointer;">Close</button>
     </div>
   </div>
 
@@ -103,19 +91,22 @@
         div.className = 'card';
         div.innerHTML = `
           <div class="icon">📖</div>
-          <h3>${p.name}</h3>
-          <div class="price">$${p.price?.toFixed(2)}</div>
-          <div class="stock">Stock: ${p.stock}</div>
+          <h3>${p.name || 'Item'}</h3>
+          <div class="price">$${p.price?.toFixed(2) || '0.00'}</div>
+          <div class="stock">Stock: ${p.stock || 0}</div>
         `;
         if (p.stock > 0) div.onclick = () => addToCart(p);
-        else div.style.opacity = '0.5';
+        else { div.style.opacity = '0.5'; div.style.cursor = 'not-allowed'; }
         container.appendChild(div);
       });
     }
 
     document.getElementById('searchInput').addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase();
-      const filtered = products.filter(p => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
+      const filtered = products.filter(p => 
+        (p.name && p.name.toLowerCase().includes(q)) || 
+        (p.category && p.category.toLowerCase().includes(q))
+      );
       renderProducts(filtered);
     });
 
@@ -139,9 +130,9 @@
         const div = document.createElement('div');
         div.className = 'cart-item';
         div.innerHTML = `
-          <span>${item.name} x ${item.qty}</span>
+          <span>${item.name || 'Item'} x ${item.qty}</span>
           <span>$${(item.price * item.qty).toFixed(2)} 
-            <button onclick="window.removeFromCart(${idx})" style="background:red;color:white;border:none;border-radius:50%;cursor:pointer;">x</button>
+            <button onclick="window.removeFromCart(${idx})" style="background:#e74c3c;color:white;border:none;border-radius:50%;cursor:pointer;width:24px;height:24px;">x</button>
           </span>
         `;
         container.appendChild(div);
@@ -150,12 +141,13 @@
     }
     window.removeFromCart = (idx) => { cart.splice(idx, 1); renderCart(); };
 
+    // Checkout - Redirect to Confirmation Page
     document.getElementById('checkoutBtn').onclick = async () => {
       if (cart.length === 0) return alert('Cart is empty!');
       if (!currentUser) return alert('Please login first.');
 
-      const customerName = prompt('Enter your Name:');
-      const address = prompt('Enter your Address:');
+      const customerName = prompt('Enter your Full Name:');
+      const address = prompt('Enter your Delivery Address:');
       const phone = prompt('Enter your Phone Number:');
       if (!customerName || !address || !phone) return alert('All fields required!');
 
@@ -167,46 +159,28 @@
         address,
         phone,
         userId: currentUser.uid,
+        userEmail: currentUser.email,
         status: 'pending',
         createdAt: new Date().toISOString(),
         billNumber: 'INV-' + Date.now()
       };
 
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      try {
+        const docRef = await addDoc(collection(db, 'orders'), orderData);
 
-      // Reduce stock
-      for (let item of cart) {
-        const ref = doc(db, 'items', item.id);
-        await updateDoc(ref, { stock: item.stock - item.qty });
+        // Reduce stock
+        for (let item of cart) {
+          const ref = doc(db, 'items', item.id);
+          await updateDoc(ref, { stock: item.stock - item.qty });
+        }
+
+        // Redirect to confirmation page
+        window.location.href = `order-confirmation.html?orderId=${docRef.id}`;
+        
+      } catch (err) {
+        alert('Error placing order: ' + err.message);
       }
-
-      showBill(orderData, docRef.id);
-      cart = [];
-      renderCart();
     };
-
-    function showBill(order, orderId) {
-      const modal = document.getElementById('billModal');
-      const content = document.getElementById('billContent');
-      let html = `<p><strong>Bill #:</strong> ${order.billNumber}</p>
-                  <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
-                  <p><strong>Customer:</strong> ${order.customerName}</p>
-                  <p><strong>Address:</strong> ${order.address}</p>
-                  <hr>
-                  <div style="max-height:200px;overflow-y:auto;">`;
-      order.items.forEach(i => {
-        html += `<div class="bill-line"><span>${i.name} x ${i.qty}</span><span>$${(i.price * i.qty).toFixed(2)}</span></div>`;
-      });
-      html += `</div><hr><div class="bill-line bill-total"><span>TOTAL</span><span>$${order.total.toFixed(2)}</span></div>`;
-      html += `<p style="margin-top:8px;font-size:14px;color:green;">✅ Order placed! ID: ${orderId}</p>`;
-      content.innerHTML = html;
-      modal.style.display = 'flex';
-
-      document.getElementById('whatsappBtn').onclick = () => {
-        const msg = `New Order Received!%0AOrder ID: ${orderId}%0ACustomer: ${order.customerName}%0APhone: ${order.phone}%0ATotal: $${order.total}%0APlease check the POS dashboard.`;
-        window.open(`https://wa.me/94XXXXXXXXX?text=${msg}`, '_blank');
-      };
-    }
   </script>
 </body>
 </html>
