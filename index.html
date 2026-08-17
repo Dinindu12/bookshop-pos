@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Bookshop POS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <h1>📚 Bookshop POS</h1>
+      <form id="loginForm">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <div id="loginError" class="error-message"></div>
+        <button type="submit">Login</button>
+      </form>
+      <p class="hint">admin@test.com / 123456</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, signInWithEmailAndPassword, onAuthStateChanged } from './firebase-config.js';
+
+    const form = document.getElementById('loginForm');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const errorDiv = document.getElementById('loginError');
+
+    // Check if already logged in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = 'dashboard.html';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.textContent = '';
+      try {
+        await signInWithEmailAndPassword(auth, email.value, password.value);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        errorDiv.textContent = '❌ Invalid email or password';
+      }
+    });
+  </script>
+</body>
+</html>
