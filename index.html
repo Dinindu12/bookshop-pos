@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>Login - POS Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
     body { background:#f0f2f5; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:16px; }
     .container { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); width:100%; max-width:400px; padding:24px; }
-    h1 { text-align:center; margin-bottom:8px; color:#2c3e50; font-size:24px; }
+    h1 { text-align:center; margin-bottom:4px; color:#2c3e50; font-size:24px; }
     .subtitle { text-align:center; color:#7f8c8d; font-size:13px; margin-bottom:20px; }
     .tab { display:flex; gap:8px; margin-bottom:16px; }
     .tab button { flex:1; padding:10px; border:none; background:#e9ecef; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.3s; }
@@ -60,7 +60,6 @@
         <option value="">-- Select Role --</option>
         <option value="admin">Admin</option>
         <option value="owner">Shop Owner</option>
-        <!-- ❌ Customer role removed -->
       </select>
       <div id="regError" class="error"></div>
       <div id="regSuccess" class="success"></div>
@@ -68,11 +67,7 @@
       <div class="role-note">📌 Only Admin & Owner roles available</div>
     </form>
     <p class="hint">Demo: admin@test.com / 123456</p>
-
-    <!-- Customer Store Link -->
-    <a href="https://dinindu12.github.io/bookshop-customer/" target="_blank" class="customer-link">
-      🛒 Visit Customer Store (No login needed)
-    </a>
+    <a href="https://dinindu12.github.io/bookshop-customer/" target="_blank" class="customer-link">🛒 Visit Customer Store (No login needed)</a>
   </div>
 
   <script type="module">
@@ -114,7 +109,6 @@
       regSuccess.style.display = 'none';
     };
 
-    // LOGIN
     loginForm.onsubmit = async (e) => {
       e.preventDefault();
       loginError.textContent = '';
@@ -132,12 +126,9 @@
         
         if (docSnap.exists()) {
           const role = docSnap.data().role;
-          // ✅ Only Admin & Owner allowed
           if (role === 'admin' || role === 'owner') {
-            showToast('✅ Login successful! Welcome ' + (docSnap.data().name || 'User') + '!');
-            setTimeout(() => {
-              window.location.href = 'pos.html';
-            }, 1000);
+            showToast('✅ Login successful!');
+            setTimeout(() => { window.location.href = 'pos.html'; }, 1000);
           } else {
             loginError.textContent = '❌ You do not have permission to access POS.';
           }
@@ -152,7 +143,6 @@
       }
     };
 
-    // REGISTER
     registerForm.onsubmit = async (e) => {
       e.preventDefault();
       regError.textContent = '';
@@ -174,21 +164,13 @@
 
       try {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, 'users', userCred.user.uid), { 
-          name, 
-          email, 
-          role, 
-          createdAt: new Date().toISOString() 
-        });
+        await setDoc(doc(db, 'users', userCred.user.uid), { name, email, role, createdAt: new Date().toISOString() });
         
         regSuccess.style.display = 'block';
-        regSuccess.textContent = '✅ Account created successfully! Welcome ' + name + '!';
-        showToast('✅ Registration successful! Welcome ' + name + '!');
+        regSuccess.textContent = '✅ Account created successfully!';
+        showToast('✅ Registration successful!');
         
-        setTimeout(() => {
-          window.location.href = 'pos.html';
-        }, 1500);
-        
+        setTimeout(() => { window.location.href = 'pos.html'; }, 1500);
       } catch (err) {
         if (err.code === 'auth/email-already-in-use') regError.textContent = '❌ Email already registered. Please login.';
         else if (err.code === 'auth/invalid-email') regError.textContent = '❌ Invalid email format.';
